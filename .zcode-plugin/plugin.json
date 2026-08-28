@@ -9,6 +9,7 @@
   "license": "MIT",
   "repository": "https://github.com/anamaxlec/zcode-web-search",
   "skills": "skills",
+  "commands": "commands",
   "mcpServers": {
     "web-search": {
       "command": "node",

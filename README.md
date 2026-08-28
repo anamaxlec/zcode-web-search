@@ -28,6 +28,8 @@ supported.
   AnySearch, Perplexity, Serper, DuckDuckGo.
 - **Zero runtime dependencies** — a single Node (>=18) ESM file using the
   built-in `fetch`. No npm install needed.
+- **Slash commands** — `/web-search [query]`, `/fetch-page [url]`, and
+  `/web-search-status` (config diagnostics).
 
 ## Install (ZCode)
 
@@ -38,7 +40,9 @@ supported.
 2. Install `zcode-web-search` from the marketplace list.
 3. Restart the session. You get two MCP tools:
    `web_search` and `fetch_content` (namespaced under
-   `plugin:zcode-web-search:web-search`).
+   `plugin:zcode-web-search:web-search`), plus three slash commands:
+   `/web-search [query]`, `/fetch-page [url]`, and `/web-search-status`
+   (diagnose keys/providers/routing).
 
 ### From a local directory
 

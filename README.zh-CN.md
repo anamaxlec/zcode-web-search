@@ -24,6 +24,8 @@ Pi 编程代理的 [pi-web-access](https://github.com/nicobailon/pi-web-access)
   AnySearch、Perplexity、Serper、DuckDuckGo。
 - **零运行时依赖** — 单个 Node（>=18）ESM 文件，只用内置 `fetch`，无需
   `npm install`。
+- **斜杠命令** — `/web-search [查询]`、`/fetch-page [url]`、
+  `/web-search-status`（诊断 key 配置和路由）。
 
 ## 安装（ZCode）
 
@@ -33,7 +35,9 @@ Pi 编程代理的 [pi-web-access](https://github.com/nicobailon/pi-web-access)
    （或粘贴仓库地址）。
 2. 在市场列表里安装 `zcode-web-search`。
 3. 重启会话。你会得到两个 MCP 工具：`web_search` 和 `fetch_content`
-   （挂在 `plugin:zcode-web-search:web-search` 命名空间下）。
+   （挂在 `plugin:zcode-web-search:web-search` 命名空间下），外加三个
+   斜杠命令：`/web-search [查询]`、`/fetch-page [url]` 和
+   `/web-search-status`（诊断配置）。
 
 ### 从本地目录安装
 
