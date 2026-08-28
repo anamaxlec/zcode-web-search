@@ -29,7 +29,7 @@ pi users need no setup, `~/.pi/web-search.json` is reused as-is.
 3. Verify with `/web-search latest Node.js LTS version` and
    `/fetch-page https://example.com`.
 
-No results? See [Troubleshooting](#troubleshooting).
+If search fails, please see [Troubleshooting](#troubleshooting).
 
 ## Tools
 
@@ -51,7 +51,7 @@ Requires Node ≥18.17 on PATH. No npm dependencies.
 | `domainFilter` | string[] | — | Restrict domains, `-` prefix excludes |
 | `provider` | string | `auto` | `auto` / `all` / a single provider name, see [Routing](#routing) |
 
-Not every provider honors the filter args:
+Not all providers support the filter arguments:
 
 | | recencyFilter | domainFilter |
 |---|---|---|
@@ -91,8 +91,8 @@ Minimal config:
 ```
 
 TinyFish search is free (30 req/min) and the same key unlocks the first tier
-of fetch_content. Add an Exa or Tavily key for better results. Omitting the
-`provider` field means `auto` routing. All fields are documented in
+of fetch_content. If you want better results, add an Exa or Tavily key. If you omit the
+`provider` field, the routing defaults to `auto`. All fields are documented in
 `.zcode-web-search.json.example`.
 
 Credential syntax (pi-compatible):
@@ -130,8 +130,8 @@ All three spellings behave identically:
 "tavily"   only that one; a failure is the answer
 ```
 
-`all` bills several services per search; use `auto` or a single provider to
-keep costs down. The keyless Exa MCP path in the `all` fallback can also be
+`all` bills several services per search; if you want to control costs, please use
+`auto` or a single provider. The keyless Exa MCP path in the `all` fallback can also be
 triggered directly with `provider: "exa"` (without a key).
 
 ## Providers
@@ -174,8 +174,8 @@ overall timeout is 120 seconds; split large `urls` batches if you hit it.
 
 - The repo contains no real API keys; keys come only from your local config,
   environment, or shell profiles.
-- `all` sends the same query to every provider with a key — one search, many
-  bills. `queries` multiplies the count.
+- `all` sends the same query to every provider with a key — one search produces
+  several bills, and `queries` doubles it again.
 - `web_search` sends query text to the selected provider; `fetch_content`
   sends URLs (and the optional `prompt`) to the fetch service.
 - `"!command"` executes a local shell command. Only use config files you

@@ -2,10 +2,8 @@
 
 # zcode-web-search
 
-ZCode 的联网搜索插件。`web_search` 搜索，`fetch_content` 抓网页正文。
-不配 key 也能用（AnySearch 匿名搜索兜底）；配置格式兼容
-[pi-web-access](https://github.com/nicobailon/pi-web-access)，在用 pi 的
-无需任何配置，`~/.pi/web-search.json` 直接复用。
+针对ZCode 的联网搜索插件。`web_search` 用于搜索，`fetch_content` 抓取网页正文。
+不配 key 也能使用（AnySearch 的匿名搜索兜底）；如果你在用 pi 的插件[pi-web-access](https://github.com/nicobailon/pi-web-access)，那么无需任何配置，可以直接复用`~/.pi/web-search.json` 。
 
 ![node](https://img.shields.io/badge/node-%E2%89%A518.17-339933)
 ![deps](https://img.shields.io/badge/%E8%BF%90%E8%A1%8C%E6%97%B6%E4%BE%9D%E8%B5%96-0-4c1)
@@ -27,7 +25,7 @@ ZCode 的联网搜索插件。`web_search` 搜索，`fetch_content` 抓网页正
 2. 重启会话。
 3. `/web-search 最新的 Node.js LTS 版本` 验证搜索，`/fetch-page https://example.com` 验证抓取。
 
-搜索失败直接看[排查](#排查)。
+搜索失败请看[排查](#排查)。
 
 ## 工具
 
@@ -47,7 +45,7 @@ ZCode 的联网搜索插件。`web_search` 搜索，`fetch_content` 抓网页正
 | `domainFilter` | string[] | — | 限定域名，`-` 前缀排除 |
 | `provider` | string | `auto` | `auto` / `all` / 单个 provider 名，见[路由](#路由) |
 
-不是所有源都支持过滤参数：
+并不是所有源都支持过滤参数：
 
 | | recencyFilter | domainFilter |
 |---|---|---|
@@ -77,7 +75,7 @@ ZCode 的联网搜索插件。`web_search` 搜索，`fetch_content` 抓网页正
   `$XDG_CONFIG_HOME/pi`）
 - `~/.zcode-web-search.json`（复制 `.zcode-web-search.json.example` 改）
 
-最小配置：
+最少配置是：
 
 ```json
 {
@@ -86,8 +84,8 @@ ZCode 的联网搜索插件。`web_search` 搜索，`fetch_content` 抓网页正
 }
 ```
 
-TinyFish 搜索免费（30 次/分），同一个 key 也解锁 fetch_content 的第一层。
-要更好的结果再加 Exa 或 Tavily 的 key。不写 `provider` 字段就是 `auto` 路由。
+TinyFish 的搜索免费（30 次/分），同一个 key 也可以使用 fetch_content 。
+如果想要更好的结果可以加上 Exa 或 Tavily 的 key。如果不写 `provider` 字段，那么默认就是 `auto` 模式。
 全部字段见 `.zcode-web-search.json.example`。
 
 凭证写法（沿用 pi 语法）：
@@ -119,7 +117,7 @@ server 会只读扫描常见 profile 文件提取 `*_API_KEY`（正则匹配，�
 "tavily"   只搜这一个，失败即返回失败
 ```
 
-`all` 一次搜索消耗多个服务的额度，控成本用 `auto` 或指定单个源。
+`all` 一次搜索消耗多个服务的额度，如果想要控制成本请用 `auto` 或指定单个搜索源。
 `all` 兜底链里的 Exa MCP 免 key 路径，也可以用 `provider: "exa"` 直接触发（未配 key 时）。
 
 ## 搜索源
@@ -137,8 +135,8 @@ server 会只读扫描常见 profile 文件提取 `*_API_KEY`（正则匹配，�
 | Serper | `serperApiKey` | `SERPER_API_KEY` | 新号免费额度 |
 | DuckDuckGo | — | — | 免费，反爬拦截常见 |
 
-端点和定价见 `.zcode-web-search.json.example` 注释与各官网，具体价格不在此列。
-除 DuckDuckGo 外都要配 key 才参与 `all` 并发。
+端点和定价见 `.zcode-web-search.json.example` 注释与各官网，具体价格不一一列举。
+除 DuckDuckGo 外都要配 key 才参与 `all` 的并发搜索。
 `jinaApiKey` / `JINA_API_KEY` 只用于 fetch_content 的 Jina Reader（可选，提高限额）。
 
 ## 抓取链
@@ -151,14 +149,14 @@ server 会只读扫描常见 profile 文件提取 `*_API_KEY`（正则匹配，�
 | 2 Firecrawl scrape | 已配 key | `api.firecrawl.dev/v1/scrape` | 逐 URL |
 | 3 Jina Reader | 免 key | `r.jina.ai` | 逐 URL |
 
-前两层要 key，都没配时直接落到 Jina——能用，但对反爬严的站点成功率低。
-抓取可能因反爬、登录墙、限流、网络问题失败。抓取路径单请求上限 90 秒，
-插件整体超时 120 秒，大批量撞限时把 `urls` 拆小。
+前两层需要 key，无配置时会回落到 Jina——能用，但对反爬严格的站点成功率很低。
+抓取可能因反爬、登录墙、限流、网络问题而失败。抓取路径单请求上限 90 秒，
+插件整体超时 120 秒，如果大批量抓取超过限时请把 `urls` 拆小。
 
 ## 费用与隐私
 
 - 仓库不含任何真实 key，key 只从本机配置、环境变量或 profile 读取。
-- `all` 把同一条查询同时发给每个已配 key 的源，一次搜索多笔费用；`queries` 再翻倍。
+- `all` 把同一条查询同时发给每个已配 key 的源，一次搜索会产生多笔费用；`queries` 会再翻倍。
 - `web_search` 发查询文本给选中的源；`fetch_content` 发 URL（和可选 `prompt`）给抓取服务。
 - `"!command"` 会在本机执行 shell 命令，只用你信任的配置。
 - 环境变量优先于配置文件——不想让某个 key 被用到，就别放进环境。
@@ -166,7 +164,7 @@ server 会只读扫描常见 profile 文件提取 `*_API_KEY`（正则匹配，�
 
 ## 排查
 
-- 搜索全挂：先跑 `/web-search-status`，看每个源的 key 状态和路由模式。
+- 搜索如果全挂：先跑 `/web-search-status`，看每个源的 key 状态和路由模式。
 - key not found：`$ENV` 引用的变量没设，或 profile 里是空值 `export KEY=""`。
 - DuckDuckGo 报 no parseable results：反爬拦截，换 AnySearch 或配 key。
 - 抓取空/半截：撞了超时或站点要登录，`urls` 拆小批。
