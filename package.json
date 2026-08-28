@@ -1,12 +1,12 @@
 {
   "name": "zcode-web-search",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "MCP web_search server for ZCode, modeled after pi-web-access.",
   "type": "module",
   "main": "src/server.js",
   "engines": {
-    "node": ">=18"
+    "node": ">=18.17"
   },
   "license": "MIT"
 }

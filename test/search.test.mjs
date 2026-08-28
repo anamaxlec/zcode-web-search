@@ -11,7 +11,23 @@ import {
   selectProviders,
   resolveMode,
   normalizeCount,
+  PROFILE_KEYS,
 } from "../src/server.js";
+
+// Temporarily hide profile-derived keys so hasCredential() only sees what the
+// test puts in the config. Returns a restore function.
+function hideProfileKeys() {
+  const saved = new Map();
+  for (const k of PROFILE_KEYS) {
+    if (process.env[k] !== undefined) {
+      saved.set(k, process.env[k]);
+      delete process.env[k];
+    }
+  }
+  return () => {
+    for (const [k, v] of saved) process.env[k] = v;
+  };
+}
 
 test("resolveCredentialString: $ENV from process env", async () => {
   const prev = process.env.TEST_ZWS;
@@ -81,4 +97,27 @@ test("resolveMode: all/explicit/auto routing", () => {
   assert.equal(resolveMode("tavily", {}), "explicit");
   assert.equal(resolveMode(undefined, { provider: "tavily" }), "explicit");
   assert.equal(resolveMode(undefined, {}), "auto");
+});
+
+// Regression: the tool schema advertises provider "auto"/"all" as values.
+// They are routing keywords and must resolve to a working provider list,
+// never to an empty one (v0.2.1 bug: they fell through as provider names).
+test("selectProviders: keyword 'auto'/'all' as tool arg never yields an empty list", () => {
+  const restore = hideProfileKeys();
+  try {
+    const cfg = { tavilyApiKey: "fake", provider: "auto" };
+    const byArgAll = selectProviders("all", { tavilyApiKey: "fake" });
+    assert.deepEqual(byArgAll, ["tavily"]);
+    assert.equal(resolveMode("all", { tavilyApiKey: "fake" }), "all");
+
+    const byArgAuto = selectProviders("auto", { tavilyApiKey: "fake" });
+    assert.equal(byArgAuto[0], "tavily");
+    assert.equal(resolveMode("auto", { tavilyApiKey: "fake" }), "auto");
+
+    const byCfgAuto = selectProviders(undefined, cfg);
+    assert.equal(byCfgAuto[0], "tavily");
+    assert.equal(resolveMode(undefined, cfg), "auto");
+  } finally {
+    restore();
+  }
 });

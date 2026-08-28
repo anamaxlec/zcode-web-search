@@ -55,17 +55,17 @@ return a generative answer instead.
 Fetch pipeline with per-URL fallback: **TinyFish Fetch → Firecrawl scrape →
 Jina Reader (keyless)**. Each URL only moves down the chain when the previous
 provider fails, so one blocked page doesn't cost its batch mates. Jina works
-without any key, so fetching is always available; a `JINA_API_KEY` raises its
-rate limits.
+without a key; a `JINA_API_KEY` raises its rate limits. The chain can still
+fail on rate limits, anti-bot walls, or login requirements.
 
 ## Provider fan-out vs fallback
 
-With `provider: "all"` (the default in this setup) all credentialed providers
-are searched **simultaneously** (mirroring pi-web-access), and results are
-merged and deduplicated — each result is tagged with the provider it came
-from. The `auto` mode (no provider configured anywhere) instead walks a
-sequential fallback chain, and a single named provider (`provider: "tavily"`)
-queries only that one.
+With `provider: "all"` all credentialed providers are searched
+**simultaneously** (mirroring pi-web-access), and results are merged and
+deduplicated — each result is tagged with the provider it came from. The
+`auto` mode instead walks a sequential fallback chain over credentialed
+providers, ending with anonymous AnySearch and keyless DuckDuckGo, and a
+single named provider (`provider: "tavily"`) queries only that one.
 
 ## Examples
 
@@ -88,12 +88,16 @@ Two config sources, read in order with per-key precedence (pi first):
    use pi. Same syntax.
 
 Provider selection: `provider` tool arg → config `provider` field → `auto`.
-With `all` or `auto`, providers with an available credential are tried in
-order (Exa → TinyFish → Tavily → Brave → Kagi → Firecrawl → AnySearch →
-Perplexity → Serper), falling back to keyless DuckDuckGo or Exa MCP. With
-zero config, the plugin works out of the box via Exa MCP (keyless) and
-keyless DuckDuckGo. Note: TinyFish Search is free (30 req/min) — a
-`TINYFISH_API_KEY` alone is enough for a zero-cost setup.
+- `all`: parallel fan-out to every provider with a key; results merged and
+  deduplicated. Keyless fallbacks (AnySearch anonymous → DuckDuckGo → Exa
+  MCP) only step in if the whole fan-out fails.
+- `auto`: sequential over credentialed providers only, then anonymous
+  AnySearch and best-effort DuckDuckGo — works with zero configuration.
+- A single named provider queries only that one (keyless `provider: "exa"`
+  uses the Exa MCP path).
+
+Note: TinyFish Search is free (30 req/min) — a `TINYFISH_API_KEY` alone is
+enough for a zero-cost setup.
 
 If keys are set in a shell profile (e.g. `~/.zshrc`) but not in the current
 environment, the server picks up the relevant `*_API_KEY` variables from

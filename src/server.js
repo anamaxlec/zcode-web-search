@@ -11,14 +11,17 @@
 // Run with --selftest to exercise config loading / credential resolution /
 // routing logic without talking to MCP.
 
-import { readFileSync, existsSync } from "node:fs";
-import { homedir } from "node:os";
+import { readFileSync, existsSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
-const VERSION = "0.1.0";
+const VERSION = "0.2.2";
 const SEARCH_TIMEOUT_MS = 60_000;
+// Fetch batches (up to 10 URLs, multi-layer fallback) need a longer ceiling
+// than a single search request; plugin.json's timeoutMs must stay above this.
+const FETCH_TIMEOUT_MS = 90_000;
 
 // Keys that may be referenced by pi-web-access config ($ENV form) and that we
 // want to reuse. When any is missing from the process environment, we try to
@@ -238,8 +241,8 @@ function buildAnswer(results) {
     .join("\n\n");
 }
 
-function requestSignal(signal) {
-  const timeout = AbortSignal.timeout(SEARCH_TIMEOUT_MS);
+function requestSignal(signal, timeoutMs = SEARCH_TIMEOUT_MS) {
+  const timeout = AbortSignal.timeout(timeoutMs);
   return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
@@ -599,7 +602,7 @@ async function fetchWithTinyFish(urls, options, config, signal) {
   const body = {
     urls: list,
     format: "markdown",
-    per_url_timeout_ms: 110_000,
+    per_url_timeout_ms: 45_000,
   };
   if (typeof options.prompt === "string" && options.prompt.trim()) {
     body.purpose = options.prompt.trim().slice(0, 2000);
@@ -608,7 +611,7 @@ async function fetchWithTinyFish(urls, options, config, signal) {
     method: "POST",
     headers: { "X-API-Key": apiKey, "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(body),
-    signal: requestSignal(signal),
+    signal: requestSignal(signal, FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`TinyFish Fetch error ${res.status}: ${redact((await res.text()).slice(0, 300), apiKey)}`);
   const data = await res.json();
@@ -632,7 +635,7 @@ async function fetchWithFirecrawl(url, config, signal) {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ url, formats: ["markdown"] }),
-    signal: requestSignal(signal),
+    signal: requestSignal(signal, FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Firecrawl scrape error ${res.status}: ${redact((await res.text()).slice(0, 300), apiKey)}`);
   const data = await res.json();
@@ -661,7 +664,7 @@ async function fetchWithJina(url, config, signal) {
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
   const res = await fetch(`https://r.jina.ai/${url}`, {
     headers,
-    signal: requestSignal(signal),
+    signal: requestSignal(signal, FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Jina reader error ${res.status}`);
   const text = await res.text();
@@ -803,11 +806,25 @@ function selectProviders(requested, config) {
   let mode;
   if (requested) {
     const list = Array.isArray(requested) ? requested : [requested];
-    names = list.map((n) => String(n).toLowerCase());
-    mode = names.includes("all") || list.length > 1 ? "all" : "explicit";
+    const lowered = list.map((n) => String(n).toLowerCase());
+    // "all" and "auto" are routing keywords, not provider names — they must
+    // never leak into `names`, or the SEARCHERS lookup empties the list.
+    if (lowered.includes("all") || list.length > 1) {
+      names = ALL_ORDER;
+      mode = "all";
+    } else if (lowered[0] === "auto") {
+      names = ALL_ORDER;
+      mode = "auto";
+    } else {
+      names = lowered;
+      mode = "explicit";
+    }
   } else if (config.provider === "all") {
     names = ALL_ORDER;
     mode = "all";
+  } else if (config.provider === "auto") {
+    names = ALL_ORDER;
+    mode = "auto";
   } else if (typeof config.provider === "string" && config.provider) {
     names = [config.provider.toLowerCase()];
     mode = "explicit";
@@ -867,10 +884,13 @@ function hasCredential(provider, config) {
 function resolveMode(requested, config) {
   if (requested) {
     const list = Array.isArray(requested) ? requested : [requested];
-    if (list.map((n) => String(n).toLowerCase()).includes("all") || list.length > 1) return "all";
+    const lowered = list.map((n) => String(n).toLowerCase());
+    if (lowered.includes("all") || list.length > 1) return "all";
+    if (lowered[0] === "auto") return "auto";
     return "explicit";
   }
   if (config.provider === "all") return "all";
+  if (config.provider === "auto") return "auto";
   if (typeof config.provider === "string" && config.provider) return "explicit";
   return "auto";
 }
@@ -1057,23 +1077,24 @@ async function handleToolsCall(params) {
 
   const sections = [];
   const allResults = [];
+  let successfulCount = 0;
   for (const query of queries) {
     try {
       const result = await runSearch(query, options, config);
       sections.push(`## Query: "${query}"\n\n${result.answer}`);
       for (const r of result.results) allResults.push({ ...r, query });
+      successfulCount += 1;
     } catch (err) {
       sections.push(`## Query: "${query}"\n\nSearch failed: ${errorMessage(err)}`);
     }
   }
 
-  const providerUsed = allResults.length ? " (provider: auto)" : "";
   const text = sections.join("\n\n");
   return {
     content: [{ type: "text", text }],
     structuredContent: {
       queries,
-      successfulQueries: sections.filter((s) => !s.includes("Search failed")).length,
+      successfulQueries: successfulCount,
       totalResults: allResults.length,
       results: allResults.slice(0, 100),
     },
@@ -1147,10 +1168,33 @@ async function runSelftest() {
     }
   };
 
-  // Config loading: pi config takes precedence over zcode config.
+  // Config loading must work on any machine. Point PI_CODING_AGENT_DIR at a
+  // temp dir with a fixture config and assert loadRawConfig() picks it up —
+  // this tests the loader itself, not whatever happens to be in ~/.pi here.
+  const fixtureDir = mkdtempSync(join(tmpdir(), "zws-selftest-"));
+  writeFileSync(
+    join(fixtureDir, "web-search.json"),
+    JSON.stringify({ provider: "all", exaApiKey: "fixture-key" })
+  );
+  const prevPiDir = process.env.PI_CODING_AGENT_DIR;
+  process.env.PI_CODING_AGENT_DIR = fixtureDir;
+  const fixtureConfig = loadRawConfig();
+  assert(
+    fixtureConfig && typeof fixtureConfig === "object" && !Array.isArray(fixtureConfig),
+    "config loads as a plain object"
+  );
+  assert(
+    fixtureConfig.provider === "all" && fixtureConfig.exaApiKey === "fixture-key",
+    "fixture config is loaded from PI_CODING_AGENT_DIR"
+  );
+  if (prevPiDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+  else process.env.PI_CODING_AGENT_DIR = prevPiDir;
+  rmSync(fixtureDir, { recursive: true, force: true });
+
+  // The real config (if any) must also load without throwing; it may be
+  // empty on machines without pi-web-access.
   const config = getConfig();
-  assert(config.provider === "all", "pi config provider=all is loaded");
-  assert(typeof config.anysearchApiKey === "string", "anysearchApiKey present (as $ENV ref)");
+  assert(config && typeof config === "object" && !Array.isArray(config), "real config loads as a plain object");
 
   // Credential resolution
   const prev = process.env.TEST_WEB_SEARCH_ENV;
@@ -1225,6 +1269,7 @@ export {
   fetchWithFirecrawl,
   fetchWithJina,
   fetchContent,
+  PROFILE_KEYS,
   TOOL_SCHEMA,
   FETCH_SCHEMA,
 };

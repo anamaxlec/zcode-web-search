@@ -1,6 +1,5 @@
 {
-  "comment": "zcode-web-search independent config. Copy to ~/.zcode-web-search.json. All fields are optional. Keys can be a literal value, \"$ENV_NAME\" to read an environment variable, or \"!command\" to run a command whose stdout is the key. Note: this file is NOT needed if you already have pi-web-access configured at ~/.pi/web-search.json — that file is reused automatically. WARNING: provider \"all\" calls every configured provider in parallel — one search may consume quota on several services at once; use \"auto\" or a single provider name to control cost. The legacy \"workflow\" field from pi-web-access is accepted but has no effect here.",
-  "provider": "all",
+  "comment": "zcode-web-search independent config. Copy to ~/.zcode-web-search.json. All fields are optional. Keys can be a literal value, \"$ENV_NAME\" to read an environment variable, or \"!command\" to run a command whose stdout is the key. No \"provider\" field here means the auto routing (sequential, cheapest to run); set \"provider\": \"all\" to fan out to every configured provider in parallel — one search then consumes quota on several services at once. Note: this file is NOT needed if you already have pi-web-access configured at ~/.pi/web-search.json — that file is reused automatically. The legacy \"workflow\" field from pi-web-access is accepted but has no effect here.",
 
   "exaApiKey": "$EXA_API_KEY",
   "tinyfishApiKey": "$TINYFISH_API_KEY",

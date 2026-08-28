@@ -7,14 +7,23 @@
         "source": "directory",
         "path": "."
       },
-      "description": "Web search + page fetching for ZCode. web_search fans out to Exa, TinyFish, Tavily, Brave, Kagi, Firecrawl, AnySearch, Perplexity, Serper (parallel merge with provider: all) with keyless fallback; fetch_content chains TinyFish Fetch -> Firecrawl -> Jina Reader. Reuses pi-web-access config (~/.pi/web-search.json) when present.",
+      "description": "Web search + page fetching for ZCode (Exa, TinyFish, Tavily, Brave, Kagi, Firecrawl, AnySearch, Perplexity, Serper, keyless fallback). web_search fans out to Exa, TinyFish, Tavily, Brave, Kagi, Firecrawl, AnySearch, Perplexity, Serper (parallel merge with provider: all) with keyless fallback; fetch_content chains TinyFish Fetch -> Firecrawl -> Jina Reader. Reuses pi-web-access config (~/.pi/web-search.json) when present.",
       "icon": "https://raw.githubusercontent.com/anamaxlec/zcode-web-search/main/icon.png",
-      "version": "0.2.1",
+      "version": "0.2.2",
       "author": {
         "name": "max333"
       },
       "category": "developer-tools",
-      "keywords": ["web-search", "search", "fetch", "mcp", "pi-web-access", "exa", "tavily", "tinyfish"]
+      "keywords": [
+        "web-search",
+        "search",
+        "fetch",
+        "mcp",
+        "pi-web-access",
+        "exa",
+        "tavily",
+        "tinyfish"
+      ]
     }
   ]
 }
