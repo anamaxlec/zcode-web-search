@@ -1,0 +1,20 @@
+{
+  "name": "zcode-web-search",
+  "plugins": [
+    {
+      "name": "zcode-web-search",
+      "source": {
+        "source": "directory",
+        "path": "."
+      },
+      "description": "Web search + page fetching for ZCode. web_search fans out to Exa, TinyFish, Tavily, Brave, Kagi, Firecrawl, AnySearch, Perplexity, Serper (parallel merge with provider: all) with keyless fallback; fetch_content chains TinyFish Fetch -> Firecrawl -> Jina Reader. Reuses pi-web-access config (~/.pi/web-search.json) when present.",
+      "icon": "icon.png",
+      "version": "0.2.0",
+      "author": {
+        "name": "max333"
+      },
+      "category": "developer-tools",
+      "keywords": ["web-search", "search", "fetch", "mcp", "pi-web-access", "exa", "tavily", "tinyfish"]
+    }
+  ]
+}

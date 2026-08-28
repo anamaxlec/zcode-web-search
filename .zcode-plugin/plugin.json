@@ -1,0 +1,22 @@
+{
+  "name": "zcode-web-search",
+  "version": "0.2.0",
+  "description": "Web search via Exa, Tavily, Brave, Kagi, Firecrawl, AnySearch, Perplexity, Serper, or keyless DuckDuckGo. Reuses pi-web-access config (~/.pi/web-search.json) when present, with an independent config option for public use.",
+  "icon": "icon.png",
+  "author": {
+    "name": "max333"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/anamaxlec/zcode-web-search",
+  "skills": "skills",
+  "mcpServers": {
+    "web-search": {
+      "command": "node",
+      "args": [
+        "${ZCODE_PLUGIN_ROOT}/src/server.js"
+      ],
+      "cwd": "${ZCODE_PROJECT_DIR}",
+      "timeoutMs": 60000
+    }
+  }
+}
