@@ -70,7 +70,8 @@ ZCode 的联网搜索插件。`web_search` 搜索，`fetch_content` 抓网页正
 
 ## 配置
 
-两个来源，按 key 逐条取优先，pi 配置赢：
+两个配置文件会同时读取并合并：同一个字段两边都写时，pi 配置的值生效；
+只在一边写的字段照常生效。
 
 - `~/.pi/web-search.json`（pi-web-access 默认位置，也认 `$PI_CODING_AGENT_DIR`、
   `$XDG_CONFIG_HOME/pi`）

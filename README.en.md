@@ -74,7 +74,8 @@ Page text is truncated at 50,000 characters per URL.
 
 ## Configuration
 
-Two sources, per-key precedence, pi config wins:
+Both config files are read and merged: for fields written on both sides, the
+pi config value takes effect; fields written on only one side apply as usual.
 
 - `~/.pi/web-search.json` (pi-web-access default; also honors
   `$PI_CODING_AGENT_DIR` and `$XDG_CONFIG_HOME/pi`)
