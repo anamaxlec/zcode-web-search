@@ -57,11 +57,11 @@ test("buildAnswer: pi-web-access style formatting", () => {
   assert.ok(a.includes("S\nSource: T (https://e.com)"));
 });
 
-test("selectProviders: no config -> sequential chain ends with keyless fallback", () => {
+test("selectProviders: no config -> sequential chain of credentialed + keyless extras", () => {
   const names = selectProviders(undefined, {});
   assert.ok(Array.isArray(names));
-  assert.ok(names.includes("duckduckgo"));
-  assert.equal(names[names.length - 1], "duckduckgo");
+  // keyless extras: anysearch (anonymous) and duckduckgo (best-effort)
+  assert.ok(names.includes("anysearch") && names.includes("duckduckgo"));
 });
 
 test("selectProviders: explicit provider first", () => {

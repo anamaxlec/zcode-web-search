@@ -835,8 +835,12 @@ function selectProviders(requested, config) {
     return ordered;
   }
   // auto: sequential fallback over credentialed providers, keyless last.
+  // AnySearch works anonymously (low rate limits) and DuckDuckGo is a
+  // best-effort extra; both only kick in when no keyed provider exists.
   const usable = ordered.filter((name) => isKeyedProvider(name) && hasCredential(name, config));
-  usable.push("duckduckgo");
+  for (const fallback of ["anysearch", "duckduckgo"]) {
+    if (!usable.includes(fallback)) usable.push(fallback);
+  }
   return usable;
 }
 
@@ -916,7 +920,7 @@ async function runSearchParallel(query, options, config, providers) {
 
   // All parallel providers failed (or returned nothing) -> keyless fallbacks.
   if (merged.length === 0) {
-    for (const provider of ["duckduckgo", "exa"]) {
+    for (const provider of ["anysearch", "duckduckgo", "exa"]) {
       try {
         const result = await searchOneProvider(provider, query, options, config);
         if (result.results.length > 0) {
@@ -1002,7 +1006,6 @@ const TOOL_SCHEMA = {
       recencyFilter: { type: "string", enum: ["day", "week", "month", "year"], description: "Only sources from this recency window." },
       domainFilter: { type: "array", items: { type: "string" }, description: "Limit domains; prefix with '-' to exclude." },
       provider: { type: "string", description: "Provider(s): auto (default), all, or a specific provider (exa, tavily, brave, kagi, firecrawl, anysearch, perplexity, serper, tinyfish, duckduckgo)." },
-      workflow: { type: "string", enum: ["none", "summary-review", "auto-summary"], default: "none", description: "Summary workflow. 'none' returns raw results." },
     },
   },
 };
@@ -1049,7 +1052,6 @@ async function handleToolsCall(params) {
     recencyFilter: args.recencyFilter,
     domainFilter: args.domainFilter,
     provider: args.provider,
-    workflow: args.workflow ?? "none",
     signal: undefined,
   };
 
@@ -1176,9 +1178,22 @@ async function runSelftest() {
   // Provider selection
   const autoChain = selectProviders(undefined, {});
   assert(Array.isArray(autoChain), "selectProviders returns array");
-  assert(autoChain[autoChain.length - 1] === "duckduckgo", "auto chain ends with keyless duckduckgo fallback");
   const allFanout = selectProviders(undefined, { provider: "all" });
   assert(!allFanout.includes("duckduckgo"), "all fan-out excludes keyless (it is the fallback)");
+
+  // Zero-key environment: hide profile-derived keys, then the auto chain
+  // should start with the anonymous anysearch fallback.
+  const savedEnv = {};
+  for (const k of PROFILE_KEYS) {
+    savedEnv[k] = process.env[k];
+    delete process.env[k];
+  }
+  const zeroKeyChain = selectProviders(undefined, {});
+  for (const [k, v] of Object.entries(savedEnv)) {
+    if (v !== undefined) process.env[k] = v;
+  }
+  assert(zeroKeyChain[0] === "anysearch", "zero-key auto chain starts with anonymous anysearch");
+  assert(zeroKeyChain.includes("duckduckgo"), "zero-key auto chain keeps duckduckgo as best-effort extra");
 
   const explicit = selectProviders("tavily", {});
   assert(explicit[0] === "tavily", "explicit provider requested first");

@@ -2,69 +2,69 @@
 
 # zcode-web-search
 
-一个 ZCode 插件，提供 `web_search` 和 `fetch_content` 两个 MCP 工具，模仿
-Pi 编程代理的 [pi-web-access](https://github.com/nicobailon/pi-web-access)
-插件。它直接复用同一份配置文件和凭证语法——如果你已经在用 pi-web-access，
-在 ZCode 里**零额外配置**就能获得同一批搜索源；不用 pi 的用户也有独立的
-配置文件可用。
+ZCode 插件，提供 `web_search`（联网搜索）和 `fetch_content`（网页正文抓取）
+两个 MCP 工具。配置写法兼容 [pi-web-access](https://github.com/nicobailon/pi-web-access)
+（Pi 编程代理的同类插件）：如果你在用 pi，`~/.pi/web-search.json` 会被直接
+复用，已配好的 key 在这里同样生效。
 
-## 功能
+## 快速开始（3 分钟）
 
-- **`web_search` 工具** — 支持单查询和批量查询、时效过滤、域名过滤，返回
-  带来源引用的合成答案。配置 `provider: "all"` 时**并发**调用所有配了 key
-  的搜索源再合并结果（与 pi-web-access 行为一致）；`auto` 模式走顺序回退链。
-- **`fetch_content` 工具** — 一次抓取最多 10 个 URL，返回干净的 markdown
-  正文。按 URL 粒度三级兜底：TinyFish Fetch（免费）→ Firecrawl scrape →
-  Jina Reader（无需 key，所以抓取永远可用）。能读那些屏蔽普通 HTTP 客户端
-  的页面（比如 Cloudflare 防护页）。
-- **复用 pi-web-access 配置**（`~/.pi/web-search.json`），包括它的
-  `$ENV` / `!command` 凭证解析规则。
-- **零配置兜底** — 不配任何 key 也能用：keyless 的 Exa MCP 和 DuckDuckGo。
-- **多个搜索源** — Exa、TinyFish、Tavily、Brave、Kagi、Firecrawl、
-  AnySearch、Perplexity、Serper、DuckDuckGo。
-- **零运行时依赖** — 单个 Node（>=18）ESM 文件，只用内置 `fetch`，无需
-  `npm install`。
-- **斜杠命令** — `/web-search [查询]`、`/fetch-page [url]`、
-  `/web-search-status`（诊断 key 配置和路由）。
+1. ZCode 里 **创建 → 添加插件市场**，输入 `anamaxlec/zcode-web-search`，安装。
+2. 重启会话。此时不需要任何 API key，`web_search` 已经可用（走 AnySearch
+   匿名搜索兜底）。
+3. 输入 `/web-search 最新的 Node.js LTS 版本` 验证——应返回几条带来源链接
+   的结果。
 
-## 安装（ZCode）
+没看到结果？跳到下面的[故障排查](#故障排查)。
 
-### 从 GitHub 安装（推荐）
+## 安全、隐私与费用
 
-1. ZCode 里：**创建 → 添加插件市场** → 输入 `anamaxlec/zcode-web-search`
-   （或粘贴仓库地址）。
-2. 在市场列表里安装 `zcode-web-search`。
-3. 重启会话。你会得到两个 MCP 工具：`web_search` 和 `fetch_content`
-   （挂在 `plugin:zcode-web-search:web-search` 命名空间下），外加三个
-   斜杠命令：`/web-search [查询]`、`/fetch-page [url]` 和
-   `/web-search-status`（诊断配置）。
+- 本仓库**不包含任何真实 API key**。key 只从你本机的配置文件、环境变量或
+  shell profile 读取。
+- `web_search` 会把**查询文本**发送给实际选中的第三方搜索服务；配置
+  `provider: "all"` 时会把查询**同时发给每个已配置的 provider**——一次搜索
+  可能同时消耗多个服务的额度、产生多笔费用，批量查询（`queries`）会进一步
+  放大调用次数。想控制成本，用 `auto` 或显式指定单个 provider。
+- `fetch_content` 会把 **URL**（以及可选的 `prompt` 提示）发送给抓取服务
+  （TinyFish / Firecrawl / Jina）。
+- 配置里的 `"!command"` 语法会在**本机执行 shell 命令**来取 key，只应使用
+  你完全信任的配置文件。
+- 各第三方服务的日志、留存与隐私政策由其自身决定，不在本插件控制范围内。
 
-### 从本地目录安装
+## 安装
 
-1. 把本目录复制（或软链）到任意位置。
-2. ZCode：**Settings → Plugin Management → Discover** → 点 `+` → 添加该
-   目录（里面带 `marketplace.json`）→ 安装 `zcode-web-search`。
-3. 重启会话。
+**从 GitHub（推荐）**：ZCode → 创建 → 添加插件市场 → 输入
+`anamaxlec/zcode-web-search` → 安装 → 重启会话。
 
-插件在 `.zcode-plugin/plugin.json` 里声明 MCP server
-（`command: node`，`args: [${ZCODE_PLUGIN_ROOT}/src/server.js]`），
-只需要 PATH 里有 Node >= 18，不用装任何依赖。
+**从本地目录**：复制或软链本目录 → Settings → Plugin Management →
+Discover → 点 `+` 添加该目录（内含 `marketplace.json`）→ 安装 → 重启会话。
+
+装好后会得到：
+
+- MCP 工具 `web_search` 和 `fetch_content`（命名空间
+  `plugin:zcode-web-search:web-search`）；
+- 斜杠命令 `/web-search [查询]`、`/fetch-page [url]`、
+  `/web-search-status`（诊断配置）。
+
+只需 PATH 里有 Node ≥ 18，无需 `npm install`。
 
 > 发新版注意：`marketplace.json` 和 `.zcode-plugin/plugin.json` 两处的
-> `version` **都要改**——更新检测拿市场条目的版本和已安装清单的版本做
-> 对比，不同步就不会提示更新。
+> `version` **都要改**——更新检测对比这两处，不同步就不会提示更新。
 
 ## 配置
 
-### 方式 A — 复用 pi-web-access 配置（在用 Pi 就选这个）
+不配置也能用（AnySearch 匿名兜底），但配一个 key 通常能显著提升质量和
+速率。两种方式，按 key 逐条取优先（pi 配置优先）：
 
-`~/.pi/web-search.json` 存在时会被自动使用（pi-web-access 的默认位置）。
-配置支持 pi 的凭证语法：
+**方式 A**：`~/.pi/web-search.json`（pi-web-access 默认位置，已在用 pi
+就无需任何操作）。
+
+**方式 B**：把 `.zcode-web-search.json.example` 复制为
+`~/.zcode-web-search.json`，填自己的 key。
 
 ```json
 {
   "provider": "all",
-  "workflow": "none",
   "exaApiKey": "$EXA_API_KEY",
   "tinyfishApiKey": "$TINYFISH_API_KEY",
   "tavilyApiKey": "$TAVILY_API_KEY",
@@ -78,72 +78,80 @@ Pi 编程代理的 [pi-web-access](https://github.com/nicobailon/pi-web-access)
 }
 ```
 
-凭证取值可以是：
+凭证取值支持：明文 key、`"$ENV_NAME"`（读环境变量）、`"!command"`（执行
+本地命令取 stdout）、`"$$..."` / `"$!..."`（字面转义）。
 
-- 明文 key 字符串；
-- `"$ENV_NAME"` — 读环境变量 `ENV_NAME`；
-- `"!command"` — 执行本地命令，stdout（去首尾空白）作为 key；
-- `"$$..."` / `"$!..."` — 字面 `$` / `!` 转义。
+key 写在 shell profile 里（如 `~/.zshrc`）而宿主进程没继承时，server 会
+从常见 profile 文件**只读提取**相关 `*_API_KEY`（只做正则扫描、从不执行
+文件，只填充当前未设置的键）。
 
-### 方式 B — 独立配置（不用 pi 的用户）
+> `provider: "all"` 会并发调用所有已配置 provider——见上方费用提示。
+> 兼容说明：pi 配置里的 `workflow` 字段会被接受但**不产生任何效果**
+> （pi 的 curator 摘要流程未实现）。
 
-把 `.zcode-web-search.json.example` 复制为 `~/.zcode-web-search.json`，
-填上自己的 key。语法同上。
+## 搜索源与路由
 
-### 自动补全环境变量
+优先级：工具参数 `provider` → 配置 `provider` 字段 → `auto`。
 
-如果你的 key 写在 shell 配置文件里（比如 `~/.zshrc`）而宿主进程没继承到，
-server 会从常见 profile 文件（`~/.zshrc`、`~/.zshenv`、`~/.zprofile`、
-`~/.profile`、`~/.bash_profile`、`~/.bashrc`）里只读提取相关 `*_API_KEY`
-变量。只做正则扫描、**从不执行**这些文件，而且只填充当前未设置的键。
+- **`all`**：并发调用**每个已配置 key 的** provider，结果按 URL 去重合并
+  并标注来源；全部失败时依次尝试 AnySearch（匿名）→ DuckDuckGo → Exa MCP。
+- **`auto`**（未做任何配置时的默认）：按 Exa → TinyFish → Tavily → Brave →
+  Kagi → Firecrawl → AnySearch → Perplexity → Serper 的顺序，**只试配了
+  key 的**；一个 key 都没有时，用 AnySearch 匿名搜索兜底（实测可用，限速
+  较严），DuckDuckGo 作尽力而为的补充。
+- **显式单个 provider**（如 `provider: "tavily"`）：只搜那一个。显式指定
+  `provider: "exa"` 而未配 key 时，会走 Exa MCP 的免 key 路径。
 
-## 搜索源的路由与选择
+| 搜索源 | 配置键 | 端点 | 免费额度 |
+|--------|--------|------|----------|
+| Exa | `exaApiKey` | `api.exa.ai/search`；无 key 走 `mcp.exa.ai` | keyless 路径免费；付费以官方页为准 |
+| TinyFish | `tinyfishApiKey` | `api.search.tinyfish.ai`（GET，`X-API-Key`） | 搜索免费（30 次/分） |
+| Tavily | `tavilyApiKey` | `api.tavily.com/search` | 每月免费 credits |
+| Brave | `braveApiKey` | `api.search.brave.com/res/v1/web/search` | 每月免费额度 |
+| Kagi | `kagiApiKey` | `kagi.com/api/v1/search` | 无（按量付费） |
+| Firecrawl | `firecrawlApiKey` | `api.firecrawl.dev` | 订阅 credits |
+| AnySearch | `anysearchApiKey` | `api.anysearch.com/v1/search` | 匿名可用（限速）；免费档 1000 次/天 |
+| Perplexity | `perplexityApiKey` | `api.perplexity.ai/chat/completions` | 无（token 计费） |
+| Serper | `serperApiKey` | `google.serper.dev/search` | 新号免费额度 |
+| DuckDuckGo | —（无 key） | `html.duckduckgo.com/html/` | 免费，但反爬拦截常见 |
 
-优先级：工具参数 `provider` → 配置里的 `provider` 字段 → `auto`。
+价格与额度以各 provider 官方定价页为准，此处不再列具体数字以免过时。
 
-- **`all`**（并发）：所有配了 key 的搜索源**同时**发起搜索，结果按 URL
-  去重合并，每条结果标注来源 provider；全部失败时回退 keyless 的
-  DuckDuckGo / Exa MCP。
-- **`auto`**（顺序回退）：按 Exa → TinyFish → Tavily → Brave → Kagi →
-  Firecrawl → AnySearch → Perplexity → Serper 的顺序逐个尝试，keyless
-  DuckDuckGo 殿后——所以零配置也能用。
-- 显式指定单个 provider（如 `provider: "tavily"`）就只搜那一个。
-
-| 搜索源 | 配置键 | 环境变量 | 端点 | 价格 |
-|--------|--------|----------|------|------|
-| Exa | `exaApiKey` | `EXA_API_KEY` | `api.exa.ai/search`（有 key）、`mcp.exa.ai`（无 key） | 有 key $7/1k；keyless 免费 |
-| TinyFish | `tinyfishApiKey` | `TINYFISH_API_KEY` | `api.search.tinyfish.ai`（GET，`X-API-Key`） | **免费**（30 次/分钟） |
-| Tavily | `tavilyApiKey` | `TAVILY_API_KEY` | `api.tavily.com/search` | 约 $8/1k（$0.008/credit） |
-| Brave | `braveApiKey` | `BRAVE_API_KEY` | `api.search.brave.com/res/v1/web/search` | $5/1k |
-| Kagi | `kagiApiKey` | `KAGI_API_KEY` | `kagi.com/api/v1/search` | $12/1k |
-| Firecrawl | `firecrawlApiKey` | `FIRECRAWL_API_KEY` | `api.firecrawl.dev/v1/search` | 订阅 credits 制 |
-| AnySearch | `anysearchApiKey` | `ANYSEARCH_API_KEY` | `api.anysearch.com/v1/search` | 免费档 1000 次/天 |
-| Perplexity | `perplexityApiKey` | `PERPLEXITY_API_KEY` | `api.perplexity.ai/chat/completions` | token + 请求费 |
-| Serper | `serperApiKey` | `SERPER_API_KEY` | `google.serper.dev/search` | $1/1k |
-| DuckDuckGo | —（无 key） | — | `html.duckduckgo.com/html/` | 免费（有反爬风险） |
-
-`jinaApiKey` / `JINA_API_KEY` 只用于 `fetch_content` 的 Jina Reader
+`jinaApiKey` / `JINA_API_KEY` 仅用于 `fetch_content` 的 Jina Reader
 （可选，提高速率限额）。
+
+### fetch_content 的抓取链
+
+按 URL 粒度依次兜底：**TinyFish Fetch（免费）→ Firecrawl scrape →
+Jina Reader（免 key）**。某个 URL 在上一层失败才落到下一层；Jina 无需
+key，所以抓取链始终有可用出口——但仍可能因限流、站点反爬策略、登录要求
+或网络问题而失败。
+
+## 故障排查
+
+- **搜索全部失败**：先跑 `/web-search-status`——它会列出每个 provider 的
+  key 配置状态（含 `$ENV` 引用是否有值）、路由模式和自检结果。
+- **某 provider 报 key not found**：`$ENV` 引用的变量未设置，或 profile
+  里的 `export KEY=""` 是空值——填上真实 key。
+- **DuckDuckGo 报 no parseable results**：DuckDuckGo 的反爬拦截，正常
+  现象，换 AnySearch 或配一个 key。
+- **改了插件代码不生效**：zcode 运行的是安装时的缓存副本
+  （`~/.zcode/cli/plugins/cache/...`），需要把改动同步过去并重启会话。
 
 ## 开发
 
 ```bash
-# 纯逻辑自检（不联网）
-node src/server.js --selftest
-
-# 单元测试（node >= 18）
-node --test test/search.test.mjs
-
-# MCP stdio 握手（initialize / tools/list / tools/call / ping）
-node scripts/handshake.mjs
+node src/server.js --selftest        # 纯逻辑自检（不联网）
+node --test test/search.test.mjs     # 单元测试
+node scripts/handshake.mjs           # MCP stdio 握手（会发一次真实搜索）
 ```
 
 ## 与 pi-web-access 的差异
 
-实现了 `web_search` 和 `fetch_content`（抓网页正文）。pi-web-access 还提供
-GitHub 仓库克隆、YouTube/视频理解、PDF 解析等能力，这里暂未包含，需要的话
-后续可以加。另外，依赖 Pi 登录态的路径（如 OpenAI/Codex 复用登录）不适用
-于 ZCode，OpenAI 搜索源未实现。
+实现了 `web_search` 和 `fetch_content`（网页正文抓取）。pi-web-access 的
+curator 摘要流程（`workflow`）、GitHub 仓库克隆、YouTube/视频理解、PDF
+解析未实现；依赖 Pi 登录态的路径（如复用 Codex 登录做 OpenAI 搜索）不适用
+于 ZCode，故 OpenAI 搜索源未实现。配置字段与凭证语法保持兼容。
 
 ## 许可
 

@@ -42,10 +42,10 @@ pi-web-access plugin for the Pi coding agent):
 - `provider` — `auto` (default), `all`, or a specific provider:
   `exa`, `tavily`, `brave`, `kagi`, `firecrawl`, `anysearch`, `perplexity`,
   `serper`, `tinyfish`, `duckduckgo`.
-- `workflow` — `none` (default), `summary-review`, `auto-summary`.
 
-The result includes a synthesized answer with per-source citations
-(`snippet` / `Source: title (url)`).
+The result includes a result summary with per-source citations
+(`snippet` / `Source: title (url)`); some providers (Tavily, Perplexity) may
+return a generative answer instead.
 
 ### fetch_content
 
