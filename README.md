@@ -1,3 +1,5 @@
+> [English](README.md) | 🌐 中文
+
 # zcode-web-search
 
 A ZCode plugin that adds a `web_search` MCP tool, modeled after the
@@ -66,13 +68,15 @@ automatically. The config supports pi's credential syntax:
   "provider": "all",
   "workflow": "none",
   "exaApiKey": "$EXA_API_KEY",
+  "tinyfishApiKey": "$TINYFISH_API_KEY",
   "tavilyApiKey": "$TAVILY_API_KEY",
   "braveApiKey": "$BRAVE_API_KEY",
   "kagiApiKey": "$KAGI_API_KEY",
   "firecrawlApiKey": "$FIRECRAWL_API_KEY",
   "anysearchApiKey": "$ANYSEARCH_API_KEY",
   "perplexityApiKey": "$PERPLEXITY_API_KEY",
-  "serperApiKey": "$SERPER_API_KEY"
+  "serperApiKey": "$SERPER_API_KEY",
+  "jinaApiKey": "$JINA_API_KEY"
 }
 ```
 
@@ -98,11 +102,19 @@ are never executed — and only fills keys that are currently unset.
 
 ## Provider order & selection
 
-`provider` tool arg → config `provider` field → `auto`. With `all`/`auto`,
-providers with an available credential are tried in order:
-Exa → TinyFish → Tavily → Brave → Kagi → Firecrawl → AnySearch → Perplexity →
-Serper, then keyless DuckDuckGo / Exa MCP as a last-resort fallback so the
-tool works with zero config.
+Priority: `provider` tool arg → config `provider` field → `auto`.
+
+- **`all`** (parallel): every credentialed provider is searched
+  **simultaneously**, results merged and deduplicated by URL with each result
+  tagged by its provider; keyless DuckDuckGo / Exa MCP step in only if
+  everything failed.
+- **`auto`** (sequential fallback): Exa → TinyFish → Tavily → Brave → Kagi →
+  Firecrawl → AnySearch → Perplexity → Serper, then keyless DuckDuckGo / Exa
+  MCP as a last-resort fallback so the tool works with zero config.
+- A single named provider (`provider: "tavily"`) queries only that one.
+
+`jinaApiKey` / `JINA_API_KEY` is only used by `fetch_content`'s Jina Reader
+(optional; raises rate limits).
 
 | Provider   | Config key          | Env var              | Endpoint                          | Price           |
 |------------|---------------------|----------------------|-----------------------------------|-----------------|
@@ -130,11 +142,14 @@ node --test test/search.test.mjs
 node scripts/handshake.mjs
 ```
 
-## Scope
+## Scope vs pi-web-access
 
-Implements `web_search` only. The pi-web-access plugin also provides
-`fetch_content` (page extraction, GitHub cloning, YouTube/video understanding,
-PDF parsing); those are not included here but could be added later.
+Implements `web_search` and `fetch_content` (page text extraction). The
+pi-web-access plugin additionally provides GitHub repo cloning,
+YouTube/video understanding, and PDF parsing — not included here, but they
+could be added later. Pi-login-backed paths (e.g. reusing the Codex login for
+OpenAI search) don't apply to ZCode, so the OpenAI provider is not
+implemented.
 
 ## License
 
